@@ -39,9 +39,13 @@ Policy:
 Question: {question}
 Answer:
 """
-    response = client.responses.create(
-        model="openai/gpt-oss-20b",
-        input=prompt,
-        temperature=0
-    )
-    st.write(response.output_text)
+   response = client.chat.completions.create(
+    model="llama3-8b-8192",
+    messages=[
+        {"role": "system", "content": "You answer strictly from policy text."},
+        {"role": "user", "content": prompt}
+    ],
+    temperature=0
+)
+
+st.write(response.choices[0].message.content)
