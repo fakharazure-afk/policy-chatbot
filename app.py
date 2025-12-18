@@ -17,43 +17,46 @@ def load_data():
     return model, index, metadata
 
 model, index, metadata = load_data()
-
 client = Groq(api_key=os.environ["GROQ_API_KEY"])
 
-def retrieve(query, k=2, max_chars=1200):
+def retrieve_context(query, k=2, max_chars=900):
     q_emb = model.encode([query], convert_to_numpy=True)
     _, I = index.search(q_emb, k)
-    collected = ""
-    results = []
-    for i in I[0]:
-        if len(collected) >= max_chars:
+    context = ""
+    for idx in I[0]:
+        text = metadata[idx]["text"]
+        if len(context) + len(text) > max_chars:
             break
-        text = metadata[i]["text"]
-        collected += text
-        results.append(text)
-    return results
+        context += text + "\n"
+    return context.strip()
 
 question = st.text_input("Ask a question from policy:")
 
 if question:
-    context = "\n".join(retrieve(question))
-    prompt = f"""
-Use only the policy context below.
-If answer not found, say you don't know.
+    context = retrieve_context(question)
 
-Policy:
-{context}
+    if not context:
+        st.warning("No relevant policy text found.")
+    else:
+        response = client.chat.completions.create(
+            model="llama3-8b-8192",
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        "You are a policy assistant. "
+                        "Answer strictly from the policy text provided below. "
+                        "If the answer is not present, say you don't know.\n\n"
+                        f"POLICY TEXT:\n{context}"
+                    )
+                },
+                {
+                    "role": "user",
+                    "content": question
+                }
+            ],
+            temperature=0,
+            max_tokens=250
+        )
 
-Question: {question}
-Answer:
-"""
-
-    response = client.chat.completions.create(
-    model="llama3-8b-8192",
-    messages=[
-        {"role": "system", "content": "You answer strictly from policy text."},
-        {"role": "user", "content": prompt}
-    ],
-    temperature=0,
-    max_tokens=300
-)
+        st.write(response.choices[0].message.content)
