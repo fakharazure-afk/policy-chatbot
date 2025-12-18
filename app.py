@@ -69,7 +69,7 @@ if question:
     max_tokens=120
 )
 
-            st.write(response.choices[0].message.content)
+           st.write(response.choices[0].message.content)
 
         except Exception as e:
     st.error(str(e))
