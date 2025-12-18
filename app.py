@@ -19,15 +19,21 @@ def load_data():
 model, index, metadata = load_data()
 client = Groq(api_key=os.environ["GROQ_API_KEY"])
 
-def retrieve_context(query, k=2, max_chars=900):
+def clean_text(text):
+    # Remove null bytes and invalid characters
+    text = text.replace("\x00", "")
+    text = text.encode("utf-8", "ignore").decode("utf-8", "ignore")
+    return text
+
+def retrieve_context(query, k=2, max_chars=700):
     q_emb = model.encode([query], convert_to_numpy=True)
     _, I = index.search(q_emb, k)
     context = ""
     for idx in I[0]:
-        text = metadata[idx]["text"]
-        if len(context) + len(text) > max_chars:
+        chunk = clean_text(metadata[idx]["text"])
+        if len(context) + len(chunk) > max_chars:
             break
-        context += text + "\n"
+        context += chunk + "\n"
     return context.strip()
 
 question = st.text_input("Ask a question from policy:")
@@ -38,25 +44,29 @@ if question:
     if not context:
         st.warning("No relevant policy text found.")
     else:
-        response = client.chat.completions.create(
-            model="llama3-8b-8192",
-            messages=[
-                {
-                    "role": "system",
-                    "content": (
-                        "You are a policy assistant. "
-                        "Answer strictly from the policy text provided below. "
-                        "If the answer is not present, say you don't know.\n\n"
-                        f"POLICY TEXT:\n{context}"
-                    )
-                },
-                {
-                    "role": "user",
-                    "content": question
-                }
-            ],
-            temperature=0,
-            max_tokens=250
-        )
+        try:
+            response = client.chat.completions.create(
+                model="llama3-8b-8192",
+                messages=[
+                    {
+                        "role": "system",
+                        "content": (
+                            "You are a telecom policy assistant. "
+                            "Answer strictly from the policy text provided. "
+                            "If the answer is not present, say you don't know.\n\n"
+                            f"POLICY TEXT:\n{context}"
+                        )
+                    },
+                    {
+                        "role": "user",
+                        "content": question
+                    }
+                ],
+                temperature=0,
+                max_tokens=200
+            )
 
-        st.write(response.choices[0].message.content)
+            st.write(response.choices[0].message.content)
+
+        except Exception as e:
+            st.error("Model rejected the request. Try a simpler question.")
