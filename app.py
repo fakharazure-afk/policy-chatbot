@@ -25,7 +25,19 @@ def clean_text(text):
     text = text.encode("utf-8", "ignore").decode("utf-8", "ignore")
     return text
 
-def retrieve_context(query, k=2, max_chars=700):
+def retrieve_context(query, k=3):
+    q_emb = model.encode([query], convert_to_numpy=True)
+    D, I = index.search(q_emb, k)
+
+    st.write("DEBUG: FAISS indices:", I.tolist())
+
+    context = ""
+    for idx in I[0]:
+        chunk = metadata[idx]["text"]
+        st.write("DEBUG chunk length:", len(chunk))
+        context += chunk.strip() + "\n"
+
+    return context.strip()
     q_emb = model.encode([query], convert_to_numpy=True)
     _, I = index.search(q_emb, k)
     context = ""
