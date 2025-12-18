@@ -58,25 +58,26 @@ if question:
     else:
         try:
             response = client.chat.completions.create(
-                model="llama3-8b-8192",
-                messages=[
-                    {
-                        "role": "system",
-                        "content": (
-                            "You are a telecom policy assistant. "
-                            "Answer strictly from the policy text provided. "
-                            "If the answer is not present, say you don't know.\n\n"
-                            f"POLICY TEXT:\n{context}"
-                        )
-                    },
-                    {
-                        "role": "user",
-                        "content": question
-                    }
-                ],
-                temperature=0,
-                max_tokens=200
-            )
+    model="llama3-8b-8192",
+    messages=[
+        {
+            "role": "system",
+            "content": "You are a telecom policy assistant. Answer strictly from the policy text."
+        },
+        {
+            "role": "user",
+            "content": f"""
+POLICY TEXT:
+{context}
+
+QUESTION:
+{question}
+"""
+        }
+    ],
+    temperature=0,
+    max_tokens=200
+)
 
             st.write(response.choices[0].message.content)
 
