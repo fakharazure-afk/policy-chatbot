@@ -25,10 +25,14 @@ def clean_text(text):
     text = text.encode("utf-8", "ignore").decode("utf-8", "ignore")
     return text
 
-def retrieve_context(query):
+def retrieve_context(query, max_chars=300):
     q_emb = model.encode([query], convert_to_numpy=True)
-    _, I = index.search(q_emb, 1)  # get only ONE best chunk
-    return metadata[I[0][0]]["text"].strip()
+    _, I = index.search(q_emb, 1)
+
+    text = metadata[I[0][0]]["text"]
+    text = text.replace("\x00", "")
+    text = text.encode("ascii", "ignore").decode()
+    return text[:max_chars].strip()
 
     q_emb = model.encode([query], convert_to_numpy=True)
     _, I = index.search(q_emb, k)
@@ -49,24 +53,24 @@ if question:
         st.warning("No relevant policy text found.")
     else:
         try:
-            response = client.chat.completions.create(
-                model="llama3-8b-8192",
-                messages=[
-                    {
-                        "role": "system",
-                        "content": "Answer strictly from the given policy text. If not found, say so."
-                    },
-                    {
-                        "role": "user",
-                        "content": context + "\n\nQuestion: " + question
-                    }
-                ],
-                temperature=0,
-                max_tokens=150
-            )
+           response = client.chat.completions.create(
+    model="llama3-8b-8192",
+    messages=[
+        {
+            "role": "system",
+            "content": "You answer questions from policy text only."
+        },
+        {
+            "role": "user",
+            "content": "Policy:\n" + context + "\nQuestion: " + question
+        }
+    ],
+    temperature=0,
+    max_tokens=120
+)
 
             st.write(response.choices[0].message.content)
 
-        except Exception:
-            st.error("Model rejected the request. Try a simpler question.")
+        except Exception as e:
+    st.error(str(e))
 
