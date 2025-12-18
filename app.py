@@ -20,10 +20,18 @@ model, index, metadata = load_data()
 
 client = Groq(api_key=os.environ["GROQ_API_KEY"])
 
-def retrieve(query, k=4):
+def retrieve(query, k=2, max_chars=1200):
     q_emb = model.encode([query], convert_to_numpy=True)
     _, I = index.search(q_emb, k)
-    return [metadata[i]["text"] for i in I[0]]
+    collected = ""
+    results = []
+    for i in I[0]:
+        if len(collected) >= max_chars:
+            break
+        text = metadata[i]["text"]
+        collected += text
+        results.append(text)
+    return results
 
 question = st.text_input("Ask a question from policy:")
 
@@ -41,12 +49,11 @@ Answer:
 """
 
     response = client.chat.completions.create(
-        model="llama3-8b-8192",
-        messages=[
-            {"role": "system", "content": "You answer strictly from policy text."},
-            {"role": "user", "content": prompt}
-        ],
-        temperature=0
-    )
-
-    st.write(response.choices[0].message.content)
+    model="llama3-8b-8192",
+    messages=[
+        {"role": "system", "content": "You answer strictly from policy text."},
+        {"role": "user", "content": prompt}
+    ],
+    temperature=0,
+    max_tokens=300
+)
