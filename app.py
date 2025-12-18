@@ -25,19 +25,11 @@ def clean_text(text):
     text = text.encode("utf-8", "ignore").decode("utf-8", "ignore")
     return text
 
-def retrieve_context(query, k=3):
+def retrieve_context(query):
     q_emb = model.encode([query], convert_to_numpy=True)
-    D, I = index.search(q_emb, k)
+    _, I = index.search(q_emb, 1)  # get only ONE best chunk
+    return metadata[I[0][0]]["text"].strip()
 
-    st.write("DEBUG: FAISS indices:", I.tolist())
-
-    context = ""
-    for idx in I[0]:
-        chunk = metadata[idx]["text"]
-        st.write("DEBUG chunk length:", len(chunk))
-        context += chunk.strip() + "\n"
-
-    return context.strip()
     q_emb = model.encode([query], convert_to_numpy=True)
     _, I = index.search(q_emb, k)
     context = ""
@@ -57,26 +49,20 @@ if question:
         st.warning("No relevant policy text found.")
     else:
         try:
-            response = client.chat.completions.create(
+           response = client.chat.completions.create(
     model="llama3-8b-8192",
     messages=[
         {
             "role": "system",
-            "content": "You are a telecom policy assistant. Answer strictly from the policy text."
+            "content": "Answer strictly from the given policy text. If not found, say so."
         },
         {
             "role": "user",
-            "content": f"""
-POLICY TEXT:
-{context}
-
-QUESTION:
-{question}
-"""
+            "content": context + "\n\nQuestion: " + question
         }
     ],
     temperature=0,
-    max_tokens=200
+    max_tokens=150
 )
 
             st.write(response.choices[0].message.content)
