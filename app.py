@@ -71,7 +71,7 @@ if question:
 
            st.write(response.choices[0].message.content)
 
-except Exception as e:
-    st.error(str(e))
+        except Exception as e:
+            st.error(str(e))
 
 
