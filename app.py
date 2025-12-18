@@ -49,23 +49,24 @@ if question:
         st.warning("No relevant policy text found.")
     else:
         try:
-           response = client.chat.completions.create(
-    model="llama3-8b-8192",
-    messages=[
-        {
-            "role": "system",
-            "content": "Answer strictly from the given policy text. If not found, say so."
-        },
-        {
-            "role": "user",
-            "content": context + "\n\nQuestion: " + question
-        }
-    ],
-    temperature=0,
-    max_tokens=150
-)
+            response = client.chat.completions.create(
+                model="llama3-8b-8192",
+                messages=[
+                    {
+                        "role": "system",
+                        "content": "Answer strictly from the given policy text. If not found, say so."
+                    },
+                    {
+                        "role": "user",
+                        "content": context + "\n\nQuestion: " + question
+                    }
+                ],
+                temperature=0,
+                max_tokens=150
+            )
 
             st.write(response.choices[0].message.content)
 
-        except Exception as e:
+        except Exception:
             st.error("Model rejected the request. Try a simpler question.")
+
